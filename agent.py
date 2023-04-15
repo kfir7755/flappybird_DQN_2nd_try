@@ -7,7 +7,7 @@ import copy
 
 pygame.init()
 
-AGENTS_PER_GEN = 500
+AGENTS_PER_GEN = 750
 # fps = 1000
 # clock = pygame.time.Clock()
 
@@ -85,7 +85,7 @@ def train():
                         added_score[i] = True
                         mean_score += scores[i]
         mean_score /= AGENTS_PER_GEN
-        print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", mean_score, "record:",
+        print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score,3), "record:",
               record)
         generation += 1
         agents_list = agents_for_new_gen(agents_list)

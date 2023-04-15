@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import numpy as np
 import os
 
-MUTATION_RATE = 0.1
-LR = 0.05
+MUTATION_RATE = 0.2
+LR = 0.1
 
 
 class Linear_QNet(nn.Module):
@@ -41,3 +41,6 @@ class Linear_QNet(nn.Module):
 
         file_name = os.path.join(model_folder_path, file_name)
         torch.save(self.state_dict(), file_name)
+
+    def load(self):
+        self.load_state_dict(torch.load('./model/model.pth'))

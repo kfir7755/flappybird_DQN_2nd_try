@@ -23,12 +23,12 @@ white = (255, 255, 255)
 # game variables
 pipe_gap = 150
 scroll_speed = 4
-dist_between_pipes = 300
+dist_between_pipes = 400
 
 # load images
-bg = pygame.image.load('img/bg.png')
-ground_img = pygame.image.load('img/ground.png')
-button_img = pygame.image.load('img/restart.png')
+bg = pygame.image.load('img/bg.png').convert_alpha()
+ground_img = pygame.image.load('img/ground.png').convert_alpha()
+button_img = pygame.image.load('img/restart.png').convert_alpha()
 
 
 def draw_text(text, font, text_col, x, y):
@@ -50,7 +50,7 @@ class Bird(pygame.sprite.Sprite):
         self.i = i
         self.counter = 0
         for num in range(1, 4):
-            img = pygame.image.load(f"img/bird{num}.png")
+            img = pygame.image.load(f"img/bird{num}.png").convert_alpha()
             self.images.append(img)
         self.image = self.images[self.index]
         self.rect = self.image.get_rect()
@@ -64,8 +64,10 @@ class Bird(pygame.sprite.Sprite):
         if self.game.flyings[self.i]:
             # apply gravity
             self.vel += 0.5
-            if self.vel > 8:
-                self.vel = 8
+            if self.vel > 12:
+                self.vel = 12
+            if self.vel < -35:
+                self.vel = -35
             if self.rect.bottom < 768:
                 self.rect.y += int(self.vel)
 
@@ -75,6 +77,8 @@ class Bird(pygame.sprite.Sprite):
                 move = pygame.mouse.get_pressed()[0]
             if move == 1 and not self.clicked:
                 self.clicked = True
+                if self.vel <= 0:
+                    self.vel -= 15
                 self.vel = -10
             if move == 0:
                 self.clicked = False
@@ -101,7 +105,7 @@ class Pipe(pygame.sprite.Sprite):
 
     def __init__(self, x, y, position):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("img/pipe.png")
+        self.image = pygame.image.load("img/pipe.png").convert_alpha()
         self.rect = self.image.get_rect()
         # position variable determines if the pipe is coming from the bottom or top
         # position 1 is from the top, -1 is from the bottom
@@ -173,7 +177,7 @@ class Game:
             x_dist_pipe_bird = self.pipe_group.sprites()[0].rect.left - self.flappy.rect.right
             bot_pipe_y_loc = self.pipe_group.sprites()[0].rect.top - bird_y_loc
             top_pipe_y_loc = self.pipe_group.sprites()[1].rect.bottom - bird_y_loc
-            return x_dist_pipe_bird/1000, 2 * bot_pipe_y_loc/screen_height,2 * top_pipe_y_loc / screen_height, self.flappy.vel / 10
+            return x_dist_pipe_bird / 1000, 2 * bot_pipe_y_loc / screen_height, 2 * top_pipe_y_loc / screen_height, self.flappy.vel / 10
         return 0.734, 2 * 134 / screen_height, -16, 0.05
 
     def play_game(self):
@@ -225,7 +229,7 @@ class Game:
         if self.flying and not self.game_over:
             # generate new pipes
             if self.last_pipe < 0:
-                pipe_height = random.randint(-100, 100)
+                pipe_height = random.randint(-170, 170)
                 btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
                 top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
                 self.pipe_group.add(btm_pipe)
@@ -260,10 +264,15 @@ class Big_Game:
         # define game variables
         self.ground_scroll = 0
         self.games_over = [False] * n
-        self.last_pipe = -1
+        self.last_pipe = dist_between_pipes
         self.scores = [0] * n
         self.passes_pipe = [False] * n
         self.pipe_group = pygame.sprite.Group()
+        pipe_height = random.randint(-170, 170)
+        btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
+        top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
+        self.pipe_group.add(btm_pipe)
+        self.pipe_group.add(top_pipe)
         self.birds_group = []
         for i in range(n):
             self.birds_group.append(pygame.sprite.Group())
@@ -285,6 +294,12 @@ class Big_Game:
 
     def reset_game(self):
         self.pipe_group.empty()
+        self.last_pipe = pipe_gap * 2
+        pipe_height = random.randint(-170, 170)
+        btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
+        top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
+        self.pipe_group.add(btm_pipe)
+        self.pipe_group.add(top_pipe)
         for i in range(self.n):
             self.flappies[i].rect.x = 100
             self.flappies[i].rect.y = int(screen_height / 2)
@@ -299,8 +314,9 @@ class Big_Game:
             x_dist_pipe_bird = self.pipe_group.sprites()[0].rect.left - self.flappies[i].rect.right
             bot_pipe_y_loc = self.pipe_group.sprites()[0].rect.top - bird_y_loc
             top_pipe_y_loc = self.pipe_group.sprites()[1].rect.bottom - bird_y_loc
-            return x_dist_pipe_bird / 1000, 10 * bot_pipe_y_loc / screen_height, 10 * top_pipe_y_loc / screen_height, self.flappies[i].vel / 10
-        return 0.734, 10 * 134 / screen_height,-160 / screen_height, 0.05
+            return x_dist_pipe_bird / 500, 10 * bot_pipe_y_loc / screen_height, 5 * top_pipe_y_loc / screen_height, \
+                   self.flappies[i].vel / 35
+        return None
 
     def play_step(self, moves):
         # draw background
@@ -326,7 +342,8 @@ class Big_Game:
                         self.scores[i] += 1
                         self.passes_pipe[i] = False
         draw_text(str(max(self.scores)), font, white, int(screen_width / 2), 20)
-        draw_text(str(sum([1 if not self.games_over[i] else 0 for i in range(self.n)])), font, white, int(3 * screen_width / 4),20)
+        draw_text(str(sum([1 if not self.games_over[i] else 0 for i in range(self.n)])), font, white,
+                  int(3 * screen_width / 4), 20)
 
         # look for collision
         for i in indices_of_not_done:
@@ -341,7 +358,7 @@ class Big_Game:
             if self.flyings[i] and not self.games_over[i]:
                 # generate new pipes
                 if self.last_pipe < 0:
-                    pipe_height = random.randint(-100, 100)
+                    pipe_height = random.randint(-170, 170)
                     btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
                     top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
                     self.pipe_group.add(btm_pipe)
