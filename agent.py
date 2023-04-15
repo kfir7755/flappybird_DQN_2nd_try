@@ -8,6 +8,8 @@ import copy
 pygame.init()
 
 AGENTS_PER_GEN = 750
+
+
 # fps = 1000
 # clock = pygame.time.Clock()
 
@@ -25,7 +27,7 @@ class Agent:
         return move
 
     def calc_fitness(self, old_state, score):
-        self.model.fitness = score**2 + 1 / (old_state[0] + 150)
+        self.model.fitness = score ** 2 + 1 / (old_state[0] + 150)
 
 
 def agents_for_new_gen(agents):
@@ -85,7 +87,58 @@ def train():
                         added_score[i] = True
                         mean_score += scores[i]
         mean_score /= AGENTS_PER_GEN
-        print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score,3), "record:",
+        print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score, 3),
+              "record:",
+              record)
+        generation += 1
+        agents_list = agents_for_new_gen(agents_list)
+        game.reset_game()
+        added_score = [False] * AGENTS_PER_GEN
+        calculated_fitness_this_round = [False] * AGENTS_PER_GEN
+
+
+def train_from_model():
+    record = 0
+    generation = 0
+    agents_list = [Agent() for _ in range(AGENTS_PER_GEN)]
+    for agent in agents_list:
+        agent.model.load()
+        agent.model.mutate()
+    game = Big_Game(AGENTS_PER_GEN)
+    added_score = [False] * AGENTS_PER_GEN
+    calculated_fitness_this_round = [False] * AGENTS_PER_GEN
+    while True:
+        record_for_this_gen = 0
+        mean_score = 0
+        # clock.tick(fps)
+        while not are_all_games_done(game):
+            old_states = []
+            final_moves = []
+            for i, agent in enumerate(agents_list):
+                # get old state
+                old_states.append(game.get_state(i))
+
+                # get move
+                final_moves.append(agent.get_action(old_states[i]))
+
+            # perform move and get new state
+            dones, scores = game.play_step(moves=final_moves)
+
+            for i in range(AGENTS_PER_GEN):
+                if dones[i] and not calculated_fitness_this_round[i]:
+                    calculated_fitness_this_round[i] = True
+                    agents_list[i].calc_fitness(old_states[i], scores[i])
+                    if scores[i] > record:
+                        record = scores[i]
+                        agents_list[i].model.save()
+                    if scores[i] > record_for_this_gen:
+                        record_for_this_gen = scores[i]
+                    if not added_score[i]:
+                        added_score[i] = True
+                        mean_score += scores[i]
+        mean_score /= AGENTS_PER_GEN
+        print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score, 3),
+              "record:",
               record)
         generation += 1
         agents_list = agents_for_new_gen(agents_list)
@@ -95,4 +148,4 @@ def train():
 
 
 if __name__ == '__main__':
-    train()
+    train_from_model()

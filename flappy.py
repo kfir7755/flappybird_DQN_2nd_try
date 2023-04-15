@@ -22,8 +22,8 @@ white = (255, 255, 255)
 
 # game variables
 pipe_gap = 150
-scroll_speed = 4
-dist_between_pipes = 400
+scroll_speed = 2
+dist_between_pipes = 300
 
 # load images
 bg = pygame.image.load('img/bg.png').convert_alpha()
@@ -229,7 +229,7 @@ class Game:
         if self.flying and not self.game_over:
             # generate new pipes
             if self.last_pipe < 0:
-                pipe_height = random.randint(-170, 170)
+                pipe_height = random.randint(-200, 200)
                 btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
                 top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
                 self.pipe_group.add(btm_pipe)
@@ -268,7 +268,7 @@ class Big_Game:
         self.scores = [0] * n
         self.passes_pipe = [False] * n
         self.pipe_group = pygame.sprite.Group()
-        pipe_height = random.randint(-170, 170)
+        pipe_height = random.randint(-200, 200)
         btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
         top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
         self.pipe_group.add(btm_pipe)
@@ -295,7 +295,7 @@ class Big_Game:
     def reset_game(self):
         self.pipe_group.empty()
         self.last_pipe = pipe_gap * 2
-        pipe_height = random.randint(-170, 170)
+        pipe_height = random.randint(-200, 200)
         btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
         top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
         self.pipe_group.add(btm_pipe)
@@ -358,7 +358,7 @@ class Big_Game:
             if self.flyings[i] and not self.games_over[i]:
                 # generate new pipes
                 if self.last_pipe < 0:
-                    pipe_height = random.randint(-170, 170)
+                    pipe_height = random.randint(-200, 200)
                     btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
                     top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
                     self.pipe_group.add(btm_pipe)
