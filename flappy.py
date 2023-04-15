@@ -263,9 +263,9 @@ class Big_Game:
     def __init__(self, n):
         # define game variables
         self.ground_scroll = 0
-        self.games_over = [False] * n
+        self.games_over = {}
         self.last_pipe = dist_between_pipes
-        self.scores = [0] * n
+        self.scores = {}
         self.passes_pipe = [False] * n
         self.pipe_group = pygame.sprite.Group()
         pipe_height = random.randint(-200, 200)
@@ -276,6 +276,8 @@ class Big_Game:
         self.birds_group = []
         for i in range(n):
             self.birds_group.append(pygame.sprite.Group())
+            self.games_over[i] = False
+            self.scores[i] = 0
         self.flappies = []
         for i in range(n):
             self.flappies.append(Bird(100, int(screen_height / 2), self, i))
@@ -318,12 +320,11 @@ class Big_Game:
                    self.flappies[i].vel / 35
         return None
 
-    def play_step(self, moves):
+    def play_step(self, moves, agents_alive):
         # draw background
         screen.blit(bg, (0, 0))
-        indices_of_not_done = [i for i in range(self.n) if not self.games_over[i]]
         self.pipe_group.draw(screen)
-        for i in indices_of_not_done:
+        for i in agents_alive:
             self.birds_group[i].draw(screen)
             self.birds_group[i].update(moves[i])
 
@@ -332,7 +333,7 @@ class Big_Game:
 
         # check the score
         if len(self.pipe_group) > 0:
-            for i in indices_of_not_done:
+            for i in agents_alive:
                 if self.birds_group[i].sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.left \
                         and self.birds_group[i].sprites()[0].rect.right < self.pipe_group.sprites()[0].rect.right \
                         and not self.passes_pipe[i]:
@@ -341,12 +342,12 @@ class Big_Game:
                     if self.birds_group[i].sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.right:
                         self.scores[i] += 1
                         self.passes_pipe[i] = False
-        draw_text(str(max(self.scores)), font, white, int(screen_width / 2), 20)
+        draw_text(str(max(self.scores.values())), font, white, int(screen_width / 2), 20)
         draw_text(str(sum([1 if not self.games_over[i] else 0 for i in range(self.n)])), font, white,
                   int(3 * screen_width / 4), 20)
 
         # look for collision
-        for i in indices_of_not_done:
+        for i in agents_alive:
             if pygame.sprite.groupcollide(self.birds_group[i], self.pipe_group, False, False) \
                     or self.flappies[i].rect.top < 0:
                 self.games_over[i] = True
@@ -374,7 +375,7 @@ class Big_Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-        for i in indices_of_not_done:
+        for i in agents_alive:
             if moves[i] == 1 and not self.flyings[i] and not self.games_over[i]:
                 self.flyings[i] = True
         pygame.display.update()

@@ -8,7 +8,7 @@ import copy
 pygame.init()
 
 AGENTS_PER_GEN = 750
-
+TAKE_BEST_MODEL_FOR_MUTATE = 30
 
 # fps = 1000
 # clock = pygame.time.Clock()
@@ -16,9 +16,9 @@ AGENTS_PER_GEN = 750
 
 class Agent:
 
-    def __init__(self):
-        self.n_games = 0
+    def __init__(self, i):
         self.model = Linear_QNet(4, 2)
+        self.i = i
 
     def get_action(self, state):
         state0 = torch.tensor(state, dtype=torch.float)
@@ -26,15 +26,19 @@ class Agent:
         move = torch.argmax(prediction).item()
         return move
 
-    def calc_fitness(self, old_state, score):
-        self.model.fitness = score ** 2 + 1 / (old_state[0] + 150)
+    def calc_fitness(self, score):
+        self.model.fitness = score ** 2
 
 
-def agents_for_new_gen(agents):
+def agents_for_new_gen_v1(agents):
     sum_fitness = sum([agent.model.fitness for agent in agents])
-    prob_to_be_parent = [agent.model.fitness / sum_fitness for agent in agents]
-    new_gen_agents = [copy.deepcopy(agent) for agent in
-                      np.random.choice(agents, size=len(agents) - 10, p=prob_to_be_parent)]
+    if sum_fitness == 0:
+        new_gen_agents = [copy.deepcopy(agent) for agent in
+                          np.random.choice(agents, size=len(agents) - 10)]
+    else:
+        prob_to_be_parent = [agent.model.fitness / sum_fitness for agent in agents]
+        new_gen_agents = [copy.deepcopy(agent) for agent in
+                          np.random.choice(agents, size=len(agents) - 10, p=prob_to_be_parent)]
     for i in range(len(new_gen_agents)):
         new_gen_agents[i].model.mutate()
     ind = np.argpartition(prob_to_be_parent, -10)[-10:]
@@ -43,17 +47,19 @@ def agents_for_new_gen(agents):
     return new_gen_agents
 
 
-def are_all_games_done(game):
-    for i in range(AGENTS_PER_GEN):
-        if not game.games_over[i]:
-            return False
-    return True
+def agents_for_new_gen(agents_n):
+    new_gen_agents = [Agent(i) for i in range(agents_n)]
+    for agent in new_gen_agents:
+        agent.model.load()
+        agent.model.mutate()
+    return new_gen_agents
 
 
 def train():
     record = 0
     generation = 0
-    agents_list = [Agent() for _ in range(AGENTS_PER_GEN)]
+    agents_list = [Agent(i) for i in range(AGENTS_PER_GEN)]
+    agents_alive = list(range(AGENTS_PER_GEN))
     game = Big_Game(AGENTS_PER_GEN)
     added_score = [False] * AGENTS_PER_GEN
     calculated_fitness_this_round = [False] * AGENTS_PER_GEN
@@ -61,23 +67,26 @@ def train():
         record_for_this_gen = 0
         mean_score = 0
         # clock.tick(fps)
-        while not are_all_games_done(game):
-            old_states = []
-            final_moves = []
-            for i, agent in enumerate(agents_list):
+        while len(agents_alive) > 0:
+            old_states = {}
+            final_moves = {}
+            for i in agents_alive:
                 # get old state
-                old_states.append(game.get_state(i))
-
+                old_states[i] = game.get_state(i)
                 # get move
-                final_moves.append(agent.get_action(old_states[i]))
+                final_moves[i] = agents_list[i].get_action(old_states[i])
 
             # perform move and get new state
-            dones, scores = game.play_step(moves=final_moves)
+            dones, scores = game.play_step(final_moves, agents_alive)
 
-            for i in range(AGENTS_PER_GEN):
+            if max(scores.values()) > 1000:
+                agents_list[agents_alive[0]].model.save()
+                agents_alive = []
+
+            for i in agents_alive:
                 if dones[i] and not calculated_fitness_this_round[i]:
                     calculated_fitness_this_round[i] = True
-                    agents_list[i].calc_fitness(old_states[i], scores[i])
+                    agents_list[i].calc_fitness(scores[i])
                     if scores[i] > record:
                         record = scores[i]
                         agents_list[i].model.save()
@@ -86,24 +95,29 @@ def train():
                     if not added_score[i]:
                         added_score[i] = True
                         mean_score += scores[i]
+                    agents_alive.remove(i)
         mean_score /= AGENTS_PER_GEN
         print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score, 3),
               "record:",
               record)
         generation += 1
-        agents_list = agents_for_new_gen(agents_list)
+        if record > TAKE_BEST_MODEL_FOR_MUTATE:
+            agents_list = agents_for_new_gen(AGENTS_PER_GEN)
+        else:
+            agents_list = agents_for_new_gen_v1(agents_list)
         game.reset_game()
+        agents_alive = list(range(AGENTS_PER_GEN))
         added_score = [False] * AGENTS_PER_GEN
         calculated_fitness_this_round = [False] * AGENTS_PER_GEN
 
 
-def train_from_model():
-    record = 0
+def train_from_model(record):
     generation = 0
-    agents_list = [Agent() for _ in range(AGENTS_PER_GEN)]
+    agents_list = [Agent(i) for i in range(AGENTS_PER_GEN)]
     for agent in agents_list:
         agent.model.load()
         agent.model.mutate()
+    agents_alive = list(range(AGENTS_PER_GEN))
     game = Big_Game(AGENTS_PER_GEN)
     added_score = [False] * AGENTS_PER_GEN
     calculated_fitness_this_round = [False] * AGENTS_PER_GEN
@@ -111,23 +125,26 @@ def train_from_model():
         record_for_this_gen = 0
         mean_score = 0
         # clock.tick(fps)
-        while not are_all_games_done(game):
-            old_states = []
-            final_moves = []
-            for i, agent in enumerate(agents_list):
+        while len(agents_alive) > 0:
+            old_states = {}
+            final_moves = {}
+            for i in agents_alive:
                 # get old state
-                old_states.append(game.get_state(i))
-
+                old_states[i] = game.get_state(i)
                 # get move
-                final_moves.append(agent.get_action(old_states[i]))
+                final_moves[i] = agents_list[i].get_action(old_states[i])
 
             # perform move and get new state
-            dones, scores = game.play_step(moves=final_moves)
+            dones, scores = game.play_step(final_moves, agents_alive)
 
-            for i in range(AGENTS_PER_GEN):
+            if max(scores.values()) > 1000:
+                agents_list[agents_alive[0]].model.save()
+                agents_alive = []
+
+            for i in agents_alive:
                 if dones[i] and not calculated_fitness_this_round[i]:
                     calculated_fitness_this_round[i] = True
-                    agents_list[i].calc_fitness(old_states[i], scores[i])
+                    agents_list[i].calc_fitness(scores[i])
                     if scores[i] > record:
                         record = scores[i]
                         agents_list[i].model.save()
@@ -136,16 +153,18 @@ def train_from_model():
                     if not added_score[i]:
                         added_score[i] = True
                         mean_score += scores[i]
+                    agents_alive.remove(i)
         mean_score /= AGENTS_PER_GEN
         print("gen:", generation, "record for this gen:", record_for_this_gen, "mean score:", round(mean_score, 3),
               "record:",
               record)
         generation += 1
-        agents_list = agents_for_new_gen(agents_list)
+        agents_list = agents_for_new_gen(AGENTS_PER_GEN)
         game.reset_game()
+        agents_alive = list(range(AGENTS_PER_GEN))
         added_score = [False] * AGENTS_PER_GEN
         calculated_fitness_this_round = [False] * AGENTS_PER_GEN
 
 
 if __name__ == '__main__':
-    train_from_model()
+    train()
