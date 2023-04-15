@@ -8,7 +8,8 @@ import copy
 pygame.init()
 
 AGENTS_PER_GEN = 750
-TAKE_BEST_MODEL_FOR_MUTATE = 30
+TAKE_BEST_MODEL_FOR_MUTATE = 100
+
 
 # fps = 1000
 # clock = pygame.time.Clock()
@@ -30,25 +31,41 @@ class Agent:
         self.model.fitness = score ** 2
 
 
-def agents_for_new_gen_v1(agents):
+def agents_for_new_gen_v1(agents, n):
     sum_fitness = sum([agent.model.fitness for agent in agents])
     if sum_fitness == 0:
         new_gen_agents = [copy.deepcopy(agent) for agent in
-                          np.random.choice(agents, size=len(agents) - 10)]
+                          np.random.choice(agents, size=n)]
+        for i in range(len(new_gen_agents)):
+            new_gen_agents[i].model.mutate()
     else:
         prob_to_be_parent = [agent.model.fitness / sum_fitness for agent in agents]
         new_gen_agents = [copy.deepcopy(agent) for agent in
-                          np.random.choice(agents, size=len(agents) - 10, p=prob_to_be_parent)]
-    for i in range(len(new_gen_agents)):
-        new_gen_agents[i].model.mutate()
-    ind = np.argpartition(prob_to_be_parent, -10)[-10:]
-    for i in ind:
-        new_gen_agents.append(agents[i])
+                          np.random.choice(agents, size=n - 10, p=prob_to_be_parent)]
+        for i in range(len(new_gen_agents)):
+            new_gen_agents[i].model.mutate()
+        ind = np.argpartition(prob_to_be_parent, -10)[-10:]
+        for i in ind:
+            new_gen_agents.append(agents[i])
+    for val in range(len(new_gen_agents)):
+        new_gen_agents[val].i = val
     return new_gen_agents
 
 
-def agents_for_new_gen(agents_n):
-    new_gen_agents = [Agent(i) for i in range(agents_n)]
+def agents_for_new_gen(agents):
+    n = len(agents)
+    new_gen_agents = [Agent(i) for i in range(int(n / 2))]
+    for agent in new_gen_agents:
+        agent.model.load()
+        agent.model.mutate()
+    new_gen_agents += agents_for_new_gen_v1(agents, n - int(n / 2))
+    for val in range(n):
+        new_gen_agents[val].i = val
+    return new_gen_agents
+
+
+def agents_from_learned_model(n):
+    new_gen_agents = [Agent(i) for i in range(n)]
     for agent in new_gen_agents:
         agent.model.load()
         agent.model.mutate()
@@ -79,8 +96,8 @@ def train():
             # perform move and get new state
             dones, scores = game.play_step(final_moves, agents_alive)
 
-            if max(scores.values()) > 1000:
-                agents_list[agents_alive[0]].model.save()
+            if max(scores.values()) > 2000:
+                agents_list[agents_alive[0]].model.save('model_easy_finished.pth')
                 agents_alive = []
 
             for i in agents_alive:
@@ -102,9 +119,9 @@ def train():
               record)
         generation += 1
         if record > TAKE_BEST_MODEL_FOR_MUTATE:
-            agents_list = agents_for_new_gen(AGENTS_PER_GEN)
+            agents_list = agents_for_new_gen(agents_list)
         else:
-            agents_list = agents_for_new_gen_v1(agents_list)
+            agents_list = agents_for_new_gen_v1(agents_list, AGENTS_PER_GEN)
         game.reset_game()
         agents_alive = list(range(AGENTS_PER_GEN))
         added_score = [False] * AGENTS_PER_GEN
@@ -137,8 +154,8 @@ def train_from_model(record):
             # perform move and get new state
             dones, scores = game.play_step(final_moves, agents_alive)
 
-            if max(scores.values()) > 1000:
-                agents_list[agents_alive[0]].model.save()
+            if max(scores.values()) > 2000:
+                agents_list[agents_alive[0]].model.save('model_easy_finished.pth')
                 agents_alive = []
 
             for i in agents_alive:
@@ -159,7 +176,7 @@ def train_from_model(record):
               "record:",
               record)
         generation += 1
-        agents_list = agents_for_new_gen(AGENTS_PER_GEN)
+        agents_list = agents_from_learned_model(AGENTS_PER_GEN)
         game.reset_game()
         agents_alive = list(range(AGENTS_PER_GEN))
         added_score = [False] * AGENTS_PER_GEN
@@ -167,4 +184,4 @@ def train_from_model(record):
 
 
 if __name__ == '__main__':
-    train()
+    train_from_model(300)
