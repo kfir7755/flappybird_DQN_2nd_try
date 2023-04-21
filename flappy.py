@@ -1,5 +1,4 @@
 import pygame
-# from pygame.locals import *
 import random
 
 pygame.init()
@@ -11,7 +10,7 @@ human_mode = False
 screen_width = 864
 screen_height = 936
 
-screen = pygame.display.set_mode((screen_width, screen_height))
+screen = pygame.display.set_mode((screen_width, screen_height), flags=pygame.HIDDEN)
 pygame.display.set_caption('Flappy Bird')
 
 # define font
@@ -64,8 +63,8 @@ class Bird(pygame.sprite.Sprite):
         if self.game.flyings[self.i]:
             # apply gravity
             self.vel += 0.5
-            if self.vel > 12:
-                self.vel = 12
+            if self.vel > 15:
+                self.vel = 15
             if self.vel < -35:
                 self.vel = -35
             if self.rect.bottom < 768:
@@ -140,129 +139,131 @@ class Button:
 
         # draw button
         screen.blit(self.image, (self.rect.x, self.rect.y))
-
         return action
 
 
-class Game:
-
-    def __init__(self):
-        # define game variables
-        self.ground_scroll = 0
-        self.game_over = False
-        self.last_pipe = -1
-        self.score = 0
-        self.pass_pipe = False
-        self.pipe_group = pygame.sprite.Group()
-        self.bird_group = pygame.sprite.Group()
-        self.flappy = Bird(100, int(screen_height / 2), self)
-        self.bird_group.add(self.flappy)
-        if human_mode:
-            self.flying = False
-        else:
-            self.flying = True
-
-    def reset_game(self):
-        self.pipe_group.empty()
-        self.flappy.rect.x = 100
-        self.flappy.rect.y = int(screen_height / 2)
-        self.score = 0
-        self.game_over = False
-        if not human_mode:
-            self.flying = True
-
-    def get_state(self):
-        if len(self.pipe_group) > 0:
-            bird_y_loc = self.flappy.rect.y
-            x_dist_pipe_bird = self.pipe_group.sprites()[0].rect.left - self.flappy.rect.right
-            bot_pipe_y_loc = self.pipe_group.sprites()[0].rect.top - bird_y_loc
-            top_pipe_y_loc = self.pipe_group.sprites()[1].rect.bottom - bird_y_loc
-            return x_dist_pipe_bird / 1000, 2 * bot_pipe_y_loc / screen_height, 2 * top_pipe_y_loc / screen_height, self.flappy.vel / 10
-        return 0.734, 2 * 134 / screen_height, -16, 0.05
-
-    def play_game(self):
-        if not human_mode:
-            # create restart button instance
-            button = Button(screen_width // 2 - 50, screen_height // 2 - 100, button_img)
-
-            run = True
-            while run:
-                run = self.play_step(button=button)[0]
-            pygame.quit()
-
-    def play_step(self, move=None, button=None):
-        run = True
-        # clock.tick(fps)
-        reward = 0
-        # draw background
-        screen.blit(bg, (0, 0))
-
-        self.pipe_group.draw(screen)
-        self.bird_group.draw(screen)
-        self.bird_group.update(move)
-
-        # draw and scroll the ground
-        screen.blit(ground_img, (self.ground_scroll, 768))
-
-        # check the score
-        if len(self.pipe_group) > 0:
-            if self.bird_group.sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.left \
-                    and self.bird_group.sprites()[0].rect.right < self.pipe_group.sprites()[0].rect.right \
-                    and not self.pass_pipe:
-                self.pass_pipe = True
-                reward = 100
-            if self.pass_pipe:
-                if self.bird_group.sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.right:
-                    self.score += 1
-                    self.pass_pipe = False
-        draw_text(str(self.score), font, white, int(screen_width / 2), 20)
-
-        # look for collision
-        if pygame.sprite.groupcollide(self.bird_group, self.pipe_group, False,
-                                      False) or self.flappy.rect.top < 0:
-            self.game_over = True
-        # once the bird has hit the ground it's game over and no longer flying
-        if self.flappy.rect.bottom >= 768:
-            self.game_over = True
-            self.flying = False
-
-        if self.flying and not self.game_over:
-            # generate new pipes
-            if self.last_pipe < 0:
-                pipe_height = random.randint(-200, 200)
-                btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
-                top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
-                self.pipe_group.add(btm_pipe)
-                self.pipe_group.add(top_pipe)
-                self.last_pipe = dist_between_pipes
-            self.last_pipe -= scroll_speed
-            self.pipe_group.update()
-            self.ground_scroll -= scroll_speed
-            if abs(self.ground_scroll) > 35:
-                self.ground_scroll = 0
-
-        # check for game over and reset
-        if self.game_over:
-            reward = -10
-            if button is not None:
-                if button.draw():
-                    self.reset_game()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.MOUSEBUTTONDOWN and not self.flying and not self.game_over and move is None:
-                self.flying = True
-            elif move == 1 and not self.flying and not self.game_over:
-                self.flying = True
-        pygame.display.update()
-        return run, reward, self.game_over, self.score
+# class Game:
+#
+#     def __init__(self):
+#         # define game variables
+#         self.ground_scroll = 0
+#         self.game_over = False
+#         self.last_pipe = -1
+#         self.score = 0
+#         self.pass_pipe = False
+#         self.pipe_group = pygame.sprite.Group()
+#         self.bird_group = pygame.sprite.Group()
+#         self.flappy = Bird(100, int(screen_height / 2), self)
+#         self.bird_group.add(self.flappy)
+#         if human_mode:
+#             self.flying = False
+#         else:
+#             self.flying = True
+#
+#     def reset_game(self):
+#         self.pipe_group.empty()
+#         self.flappy.rect.x = 100
+#         self.flappy.rect.y = int(screen_height / 2)
+#         self.score = 0
+#         self.game_over = False
+#         if not human_mode:
+#             self.flying = True
+#
+#     def get_state(self):
+#         if len(self.pipe_group) > 0:
+#             bird_y_loc = self.flappy.rect.y
+#             x_dist_pipe_bird = self.pipe_group.sprites()[0].rect.left - self.flappy.rect.right
+#             bot_pipe_y_loc = self.pipe_group.sprites()[0].rect.top - bird_y_loc
+#             top_pipe_y_loc = self.pipe_group.sprites()[1].rect.bottom - bird_y_loc
+#             return x_dist_pipe_bird / 1000, 2 * bot_pipe_y_loc / screen_height, 2 * top_pipe_y_loc / screen_height, self.flappy.vel / 10
+#         return 0.734, 2 * 134 / screen_height, -16, 0.05
+#
+#     def play_game(self):
+#         if not human_mode:
+#             # create restart button instance
+#             button = Button(screen_width // 2 - 50, screen_height // 2 - 100, button_img)
+#
+#             run = True
+#             while run:
+#                 run = self.play_step(button=button)[0]
+#             pygame.quit()
+#
+#     def play_step(self, move=None, button=None):
+#         run = True
+#         # clock.tick(fps)
+#         reward = 0
+#         # draw background
+#         screen.blit(bg, (0, 0))
+#
+#         self.pipe_group.draw(screen)
+#         self.bird_group.draw(screen)
+#         self.bird_group.update(move)
+#
+#         # draw and scroll the ground
+#         screen.blit(ground_img, (self.ground_scroll, 768))
+#
+#         # check the score
+#         if len(self.pipe_group) > 0:
+#             if self.bird_group.sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.left \
+#                     and self.bird_group.sprites()[0].rect.right < self.pipe_group.sprites()[0].rect.right \
+#                     and not self.pass_pipe:
+#                 self.pass_pipe = True
+#                 reward = 100
+#             if self.pass_pipe:
+#                 if self.bird_group.sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.right:
+#                     self.score += 1
+#                     self.pass_pipe = False
+#         draw_text(str(self.score), font, white, int(screen_width / 2), 20)
+#
+#         # look for collision
+#         if pygame.sprite.groupcollide(self.bird_group, self.pipe_group, False,
+#                                       False) or self.flappy.rect.top < 0:
+#             self.game_over = True
+#         # once the bird has hit the ground it's game over and no longer flying
+#         if self.flappy.rect.bottom >= 768:
+#             self.game_over = True
+#             self.flying = False
+#
+#         if self.flying and not self.game_over:
+#             # generate new pipes
+#             if self.last_pipe < 0:
+#                 pipe_height = random.randint(-200, 200)
+#                 btm_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, -1)
+#                 top_pipe = Pipe(screen_width, int(screen_height / 2) + pipe_height, 1)
+#                 self.pipe_group.add(btm_pipe)
+#                 self.pipe_group.add(top_pipe)
+#                 self.last_pipe = dist_between_pipes
+#             self.last_pipe -= scroll_speed
+#             self.pipe_group.update()
+#             self.ground_scroll -= scroll_speed
+#             if abs(self.ground_scroll) > 35:
+#                 self.ground_scroll = 0
+#
+#         # check for game over and reset
+#         if self.game_over:
+#             reward = -10
+#             if button is not None:
+#                 if button.draw():
+#                     self.reset_game()
+#
+#         for event in pygame.event.get():
+#             if event.type == pygame.QUIT:
+#                 run = False
+#             if event.type == pygame.MOUSEBUTTONDOWN and not self.flying and not self.game_over and move is None:
+#                 self.flying = True
+#             elif move == 1 and not self.flying and not self.game_over:
+#                 self.flying = True
+#         pygame.display.update()
+#         return run, reward, self.game_over, self.score
 
 
 class Big_Game:
     def __init__(self, n):
         # define game variables
         self.ground_scroll = 0
+        self.screen = pygame.display.set_mode((screen_width, screen_height), flags=pygame.SHOWN)
+        self.is_shown = True
+        pygame.display.set_caption('Flappy Bird')
         self.games_over = {}
         self.last_pipe = dist_between_pipes
         self.scores = {}
@@ -287,6 +288,14 @@ class Big_Game:
             self.flyings = [False] * n
         else:
             self.flyings = [True] * n
+
+    def change_screen_condition(self):
+        if self.is_shown:
+            self.is_shown = False
+            self.screen = pygame.display.set_mode((screen_width, screen_height), flags=pygame.HIDDEN)
+        else:
+            self.is_shown = True
+            self.screen = pygame.display.set_mode((screen_width, screen_height), flags=pygame.SHOWN)
 
     def findMinNotDone(self):
         for i in range(self.n):
@@ -322,14 +331,17 @@ class Big_Game:
 
     def play_step(self, moves, agents_alive):
         # draw background
-        screen.blit(bg, (0, 0))
-        self.pipe_group.draw(screen)
-        for i in agents_alive:
-            self.birds_group[i].draw(screen)
-            self.birds_group[i].update(moves[i])
-
-        # draw and scroll the ground
-        screen.blit(ground_img, (self.ground_scroll, 768))
+        if self.is_shown:
+            screen.blit(bg, (0, 0))
+            self.pipe_group.draw(screen)
+            # draw and scroll the ground
+            screen.blit(ground_img, (self.ground_scroll, 768))
+            for i in agents_alive:
+                self.birds_group[i].draw(screen)
+                self.birds_group[i].update(moves[i])
+        else:
+            for i in agents_alive:
+                self.birds_group[i].update(moves[i])
 
         # check the score
         if len(self.pipe_group) > 0:
@@ -342,9 +354,10 @@ class Big_Game:
                     if self.birds_group[i].sprites()[0].rect.left > self.pipe_group.sprites()[0].rect.right:
                         self.scores[i] += 1
                         self.passes_pipe[i] = False
-        draw_text(str(max(self.scores.values())), font, white, int(screen_width / 2), 20)
-        draw_text(str(sum([1 if not self.games_over[i] else 0 for i in range(self.n)])), font, white,
-                  int(3 * screen_width / 4), 20)
+        if self.is_shown:
+            draw_text(str(max(self.scores.values())), font, white, int(screen_width / 2), 20)
+            draw_text(str(sum([1 if not self.games_over[i] else 0 for i in range(self.n)])), font, white,
+                      int(3 * screen_width / 4), 20)
 
         # look for collision
         for i in agents_alive:
@@ -378,5 +391,6 @@ class Big_Game:
         for i in agents_alive:
             if moves[i] == 1 and not self.flyings[i] and not self.games_over[i]:
                 self.flyings[i] = True
-        pygame.display.update()
+        if self.is_shown:
+            pygame.display.update()
         return self.games_over, self.scores

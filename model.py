@@ -4,15 +4,15 @@ import torch.nn.functional as F
 import numpy as np
 import os
 
-MUTATION_RATE = 0.2
+MUTATION_RATE = 0.1
 LR = 0.1
 
 
 class Linear_QNet(nn.Module):
     def __init__(self, input_size, output_size):
         super().__init__()
-        self.linear1 = nn.Linear(input_size, 8)
-        self.linear2 = nn.Linear(8, output_size)
+        self.linear1 = nn.Linear(input_size, 16)
+        self.linear2 = nn.Linear(16, output_size)
         self.fitness = 0
 
     def forward(self, x):
@@ -20,7 +20,7 @@ class Linear_QNet(nn.Module):
         x = self.linear2(x)
         return x
 
-    def mutate(self):
+    def mutate(self,lr=LR):
         for layer in [self.linear1, self.linear2]:
             weights, biases = layer.weight.data, layer.bias.data
             weights, biases = weights.detach().numpy(), biases.detach().numpy()
@@ -28,8 +28,8 @@ class Linear_QNet(nn.Module):
                                                                                       size=weights.shape)
             biases_noise = np.random.normal(size=biases.shape) * np.random.binomial(1, MUTATION_RATE, size=biases.shape)
             np.random.binomial(1, MUTATION_RATE, size=None)
-            weights += LR * weights_noise
-            biases += LR * biases_noise
+            weights += lr * weights_noise
+            biases += lr * biases_noise
             with torch.no_grad():
                 layer.weight.data = torch.Tensor(weights)
                 layer.bias.data = torch.Tensor(biases)
