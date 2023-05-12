@@ -10,16 +10,15 @@ pygame.init()
 AGENTS_PER_GEN = 750
 TAKE_BEST_MODEL_FOR_MUTATE = 100
 SHOW_SCREEN_EVERY = 10
+print(torch.cuda.is_available())
 
-
-# fps = 1000
-# clock = pygame.time.Clock()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Agent:
 
     def __init__(self, i):
-        self.model = Linear_QNet(4, 2)
+        self.model = Linear_QNet(4, 2,device)
         self.i = i
 
     def get_action(self, state):
